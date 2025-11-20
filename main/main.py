@@ -2,14 +2,14 @@ from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from typing import Annotated
 from pydantic import BaseModel
-from auth.models import User, DataBaseUser
-from auth.methods import get_user, get_current_user, get_current_active_user
+from auth.models import User, DataBaseUser, Token
+from auth.methods import * #get_user, get_current_user, get_current_active_user
 
 fake_users = {
         "johndoe": {
             "username":"johndoe",
             "email":"johndoe@servr.com",
-            "hashed_password": "fakehashedsecret",
+            "hashed_password": "$argon2id$v=19$m=65536,t=3,p=4$DPSn4ZmyAQCE/xecn01Q7Q$T6t3QcgODCWTTgzCfuVXtcUDal71bWv16exqpFTO49k",
             "active": True,
  },}
 
@@ -28,14 +28,20 @@ async def read_items(token: Annotated[str, Depends(oauth2_scheme)]):
 @app.get("/users/me")
 async def read_users_me(current_user: Annotated[User, Depends(get_current_active_user)]):
     return current_user
+@app.get("/passi")
+async def hash_it():
+    # since havent made create account point
+    return get_password_hash("secret")
 @app.post("/token")
-async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
-    user_dict = fake_users.get(form_data.username)
-    if not user_dict:
-        raise HTTPException(status_code=400, detail="Incorrect nnname or password")
-    user = DataBaseUser(**user_dict)
-    hashed_password = fake_hash_password(form_data.password)
-    if not hashed_password == user.hashed_password:
-        raise HTTPException(status_code=400, detail="Incorrect name or password")
+async def login_for_access_token(form_data: Annotated[OAuth2PasswordRequestForm, Depends()])->Token:
+    user = authenticate_user(fake_users, form_data.username, form_data.password)
+    if not user:
+        raise HTTPException(status_code=400, 
+                            detail="Incorrect name or password", 
+                            headers={"WWW-Authenticate": "Bearer"},
+                            )
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+            data={"sub":user.username}, expires_delta=access_token_expires)
+    return Token(access_token=access_token, token_type="bearer")
     
-    return {"access_token": user.username, "token_type": "bearer"}
