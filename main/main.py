@@ -4,6 +4,10 @@ from typing import Annotated
 from pydantic import BaseModel
 from auth.models import User, DataBaseUser, Token
 from auth.methods import * #get_user, get_current_user, get_current_active_user
+from database import *
+
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, Session
+from sqlalchemy import select
 
 fake_users = {
         "johndoe": {
@@ -12,6 +16,26 @@ fake_users = {
             "hashed_password": "$argon2id$v=19$m=65536,t=3,p=4$DPSn4ZmyAQCE/xecn01Q7Q$T6t3QcgODCWTTgzCfuVXtcUDal71bWv16exqpFTO49k",
             "active": True,
  },}
+
+class Base(DeclarativeBase):
+    pass
+
+class User1(Base):
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    username: Mapped[str]
+    email: Mapped[str]
+    hashed_password: Mapped[str]
+    active: Mapped[bool]
+
+
+Base.metadata.create_all(engine)
+
+with Session(engine) as session:
+    row = session.execute(select(User1))
+    for res in row.scalars():
+            print(res.username)
 
 app = FastAPI()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
