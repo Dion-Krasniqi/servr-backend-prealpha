@@ -4,8 +4,8 @@ from typing import Annotated
 from pydantic import BaseModel
 from auth.models import User, DataBaseUser, Token
 from auth.methods import * #get_user, get_current_user, get_current_active_user
-from database import *
 
+from database import *
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, Session
 from sqlalchemy import select
 
@@ -30,7 +30,7 @@ class User1(Base):
     active: Mapped[bool]
 
 
-Base.metadata.create_all(engine)
+Base.metadata.create_all(engine) # from database.py
 
 with Session(engine) as session:
     row = session.execute(select(User1))
@@ -58,7 +58,7 @@ async def hash_it():
     return get_password_hash("secret")
 @app.post("/token")
 async def login_for_access_token(form_data: Annotated[OAuth2PasswordRequestForm, Depends()])->Token:
-    user = authenticate_user(fake_users, form_data.username, form_data.password)
+    user = authenticate_user(Session(engine), form_data.username, form_data.password)
     if not user:
         raise HTTPException(status_code=400, 
                             detail="Incorrect name or password", 

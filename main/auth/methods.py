@@ -5,8 +5,10 @@ import jwt
 from jwt.exceptions import InvalidTokenError
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from .models import DataBaseUser, User 
+from .models import * #DataBaseUser, User 
 from pwdlib import PasswordHash
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 #maybe define link to db here
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
@@ -23,8 +25,13 @@ def get_password_hash(password):
     return password_hash.hash(password)
 
 def get_user(db, username:str):
-    if username in db:
-        user_dict = db[username]
+    row = db.execute(select(UserPSQL)).first()
+    if row:
+
+        user_dict = {"username":row[0].username,
+                     "email":row[0].email, 
+                     "hashed_password":row[0].hashed_password, 
+                     "active":row[0].active}
         return DataBaseUser(**user_dict)
 
 def authenticate_user(db, username: str, password: str):
