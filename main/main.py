@@ -5,18 +5,14 @@ from pydantic import BaseModel
 from auth.methods import *
 from auth.models import *
 
-from database import *
-#class Base(DeclarativeBase):
-#    pass
 
-#Base.metadata.create_all(engine) # from database.py
+
 
 app = FastAPI()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 def fake_hash_password(password: str):
     return "fakehashed" + password
-
 @app.get("/")
 async def root():
    return {"message":"Hello World"}
@@ -42,4 +38,7 @@ async def login_for_access_token(form_data: Annotated[OAuth2PasswordRequestForm,
     access_token = create_access_token(
             data={"sub":user.username}, expires_delta=access_token_expires)
     return Token(access_token=access_token, token_type="bearer")
+@app.post("/create")
+async def create_user():
+   await create_new_user('johnpoe','johnpoe@gmail.com','secret')
     

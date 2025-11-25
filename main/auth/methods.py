@@ -6,7 +6,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from .models import * #DataBaseUser, User 
 from pwdlib import PasswordHash
-from sqlalchemy import select
+from sqlalchemy import select, insert
 from sqlalchemy.orm import Session, DeclarativeBase
 
 #maybe define link to db here
@@ -14,10 +14,7 @@ from sqlalchemy.orm import Session, DeclarativeBase
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-
-SQLALCHEMY_DATABASE_URL = 'postgresql://postgres:dinqja123@localhost/servr_db'
-
-engine = create_engine(SQLALCHEMY_DATABASE_URL)
+from database.database import *
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
@@ -28,12 +25,11 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 Base.metadata.create_all(engine) # from database.py
 
-session = Session(engine)
+session = Session(engine) #SessionLocal
 
 password_hash = PasswordHash.recommended()
 def verify_password(raw_password, hashed_password):
     return password_hash.verify(raw_password, hashed_password)
-
 def get_password_hash(password):
     return password_hash.hash(password)
 
@@ -90,3 +86,7 @@ async def get_current_active_user(current_user: Annotated[User, Depends(get_curr
     if (current_user.active==False):
         raise HTTPException(status_code=400, detail="Inactive User")
     return current_user
+
+async def create_new_user(username: str, email: str, password: str):
+    newUser = {"username" : username, "email" : email, "hashed_password" : get_password_hash(password), "active" : True}
+    session.execute(insert(UserPSQL).values(newUser))
