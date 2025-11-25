@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, Form
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from typing import Annotated
 from pydantic import BaseModel
@@ -31,14 +31,16 @@ async def login_for_access_token(form_data: Annotated[OAuth2PasswordRequestForm,
     user = authenticate_user(form_data.username, form_data.password)
     if not user:
         raise HTTPException(status_code=400, 
-                            detail="Incorrect name or password", 
+                            detail="Incorrect email or password", 
                             headers={"WWW-Authenticate": "Bearer"},
                             )
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-            data={"sub":user.username}, expires_delta=access_token_expires)
+            data={"sub":user.email}, expires_delta=access_token_expires)
     return Token(access_token=access_token, token_type="bearer")
-@app.post("/create")
-async def create_user():
-   await create_new_user('johnpoe','johnpoe@gmail.com','secret')
-    
+@app.post("/create_user")
+async def create_user(username: Annotated[str, Form()], email: Annotated[str, Form()],
+                      password:Annotated[str, Form()]):
+
+  await create_new_user(username,email,password)
+  return 0  
