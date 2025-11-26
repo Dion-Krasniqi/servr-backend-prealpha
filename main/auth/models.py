@@ -19,7 +19,6 @@ class UserPSQL(Base):
     hashed_password: Mapped[str]
     active: Mapped[bool]
 
-
 class DataBaseUser(User):
     hashed_password: str
 

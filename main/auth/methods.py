@@ -1,7 +1,6 @@
 import jwt
 import uuid
-import os
-
+import os, errno
 from dotenv import load_dotenv
 from typing import Annotated
 from datetime import datetime, timedelta, timezone
@@ -19,7 +18,7 @@ from .models import * #DataBaseUser, User
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 load_dotenv()
-storage_url = os.getenv("STORAGE_ADDRESS")
+storage_url = os.path.realpath(os.path.expanduser(os.getenv("STORAGE_ADDRESS")))
 SECRET_KEY = "853237eb79d57d78bbcad22b7c81f5e8e4ec8c05b8cd44905d428316e981b3d2e" # env this soon
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
@@ -91,12 +90,19 @@ async def create_new_user(username: str, email: str, password: str):
     if user:
         raise HTTPException(status_code=400, detail="User with this email already exists")
     new_id = uuid.uuid4()
+    path = os.path.join(storage_url,str(new_id))
+    try:
+         os.makedirs(path)
+    except OSError as e:
+         if e.errno != errno.EEXIST:
+            raise
     newUser = {"username" : username, "email" : email, "hashed_password" : get_password_hash(password), "active" : True, "id": new_id}
     try:
         session.execute(insert(UserPSQL).values(newUser))
         session.commit()
-        #create directory
+        
     except:
         session.rollback()
         raise HTTPException(status_code=502, detail="Error occured while creating user")
+
     return 1
