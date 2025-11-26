@@ -1,5 +1,7 @@
 from pydantic import BaseModel
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.dialects.postgresql import UUID
+import uuid
 
 class User(BaseModel):
     username: str
@@ -11,7 +13,7 @@ class Base(DeclarativeBase):
 
 class UserPSQL(Base):
     __tablename__ = "users"
-    id: Mapped[int] = mapped_column(primary_key=True)
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
     username: Mapped[str]
     email: Mapped[str]
     hashed_password: Mapped[str]

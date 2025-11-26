@@ -1,29 +1,36 @@
+import jwt
+import uuid
+import os
+
+from dotenv import load_dotenv
 from typing import Annotated
 from datetime import datetime, timedelta, timezone
-import jwt
 from jwt.exceptions import InvalidTokenError
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from .models import * #DataBaseUser, User 
 from pwdlib import PasswordHash
-from sqlalchemy import select, insert
-from sqlalchemy.orm import Session, DeclarativeBase
+from sqlalchemy import select, insert, create_engine
+from sqlalchemy.orm import Session
 
-from sqlalchemy import create_engine
 from database.database import *
+from .models import * #DataBaseUser, User 
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-SECRET_KEY = "853237eb79d57d78bbcad22b7c81f5e8e4ec8c05b8cd44905d428316e981b3d2e" # would env this but just test
+load_dotenv()
+storage_url = os.getenv("STORAGE_ADDRESS")
+SECRET_KEY = "853237eb79d57d78bbcad22b7c81f5e8e4ec8c05b8cd44905d428316e981b3d2e" # env this soon
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 session = Session(engine) 
 
 password_hash = PasswordHash.recommended()
+
 def verify_password(raw_password, hashed_password):
     return password_hash.verify(raw_password, hashed_password)
+
 def get_password_hash(password):
     return password_hash.hash(password)
 
@@ -33,7 +40,8 @@ def get_user(email:str):
         user_dict = {"username":row[0].username,
                      "email":row[0].email, 
                      "hashed_password":row[0].hashed_password, 
-                     "active":row[0].active}
+                     "active":row[0].active,
+                     "id":row[0].id}
         return DataBaseUser(**user_dict)
 
 def authenticate_user(email: str, password: str):
@@ -82,9 +90,13 @@ async def create_new_user(username: str, email: str, password: str):
     user = get_user(email)
     if user:
         raise HTTPException(status_code=400, detail="User with this email already exists")
-    newUser = {"username" : username, "email" : email, "hashed_password" : get_password_hash(password), "active" : True}
+    new_id = uuid.uuid4()
+    newUser = {"username" : username, "email" : email, "hashed_password" : get_password_hash(password), "active" : True, "id": new_id}
     try:
         session.execute(insert(UserPSQL).values(newUser))
+        session.commit()
+        #create directory
     except:
+        session.rollback()
         raise HTTPException(status_code=502, detail="Error occured while creating user")
     return 1
