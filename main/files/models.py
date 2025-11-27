@@ -1,0 +1,16 @@
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import ForeignKey
+import uuid
+
+class Base(DeclarativeBase):
+    pass
+
+class FilePSQL(Base):
+    __tablename__ = "files"
+    file_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    filename: Mapped[str]
+    extension: Mapped[str]
+    bucket: Mapped[str]
+    owner_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"))
+

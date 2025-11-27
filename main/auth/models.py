@@ -20,6 +20,7 @@ class UserPSQL(Base):
     active: Mapped[bool]
 
 class DataBaseUser(User):
+    id: uuid.UUID
     hashed_password: str
 
 class Token(BaseModel):
