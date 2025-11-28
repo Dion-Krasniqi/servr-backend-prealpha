@@ -28,7 +28,8 @@ async def create_file(file: UploadFile, current_user: DataBaseUser):
     file_path = os.path.join(storage_url, str(owner_id))
     
     file_id = uuid.uuid4()
-    file_path = os.path.join(file_path, str(file_id))
+    name, extension = os.path.splitext(file.filename)
+    file_path = os.path.join(file_path, str(file_id) + extension)
     contents = await file.read()
     # potentially save file id for the filename, just keep filename in postgres
     try:
@@ -37,8 +38,6 @@ async def create_file(file: UploadFile, current_user: DataBaseUser):
     except Exception as e:
         print(e)
     
-    name, extension = os.path.splitext(file.filename)
-     
     new_file = {"file_id": file_id, 
                 "filename": name, 
                 "extension": extension, 
