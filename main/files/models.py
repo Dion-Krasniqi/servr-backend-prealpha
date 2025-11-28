@@ -12,5 +12,6 @@ class FilePSQL(Base):
     filename: Mapped[str]
     extension: Mapped[str]
     bucket: Mapped[str]
+    size: Mapped[int]
     owner_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"))
 
