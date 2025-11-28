@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, status, Form, UploadFile
+from fastapi import FastAPI, Depends, HTTPException, status, Form, UploadFile, File
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from typing import Annotated
 from pydantic import BaseModel
@@ -49,3 +49,7 @@ async def create_user(username: Annotated[str, Form()], email: Annotated[str, Fo
 @app.post("/upload_file")
 async def upload_file(file: UploadFile, current_user: Annotated[DataBaseUser, Depends(get_current_active_user)]):
      await create_file(file, current_user)
+
+@app.get("/files/")
+async def show_files(current_user: Annotated[DataBaseUser, Depends(get_current_active_user)]):
+    await get_files(current_user)
