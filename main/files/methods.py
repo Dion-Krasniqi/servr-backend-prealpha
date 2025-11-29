@@ -1,7 +1,7 @@
 from fastapi import UploadFile, HTTPException
-from sqlalchemy import create_engine, select, insert, func
+from sqlalchemy import create_engine, select, insert, func, any_, update
 from sqlalchemy.orm import Session
-
+from typing import List
 from database.database import *
 from .models import *
 from auth.models import *
@@ -58,11 +58,31 @@ async def create_file(file: UploadFile, current_user: DataBaseUser):
 async def get_files(user: DataBaseUser):
     if (user == None):
         return
+    
     owner_id = user.id
    
     file_path = os.path.join(storage_url, str(owner_id))
     
-    results = session.execute(select(FilePSQL.filename, FilePSQL.extension).where(FilePSQL.owner_id == owner_id))
+    results = session.execute(select(FilePSQL.filename, FilePSQL.extension).
+                              where((FilePSQL.owner_id == owner_id) | 
+                                    (user.email == any_(FilePSQL.shared_with))))
     for res in results:
         cur_path = os.path.join(file_path, res.filename + res.extension)
         print(cur_path)
+
+async def share_file(file_id: uuid, users: List[str]):
+    if (len(users) == 0 or file_id == None):
+        return
+    file_uuid = uuid.UUID(file_id)
+    try:
+        session.execute(update(FilePSQL).where(FilePSQL.id == file__uuid).
+                    values(shared_with = FilePSQL.shared_with + users))
+        session.commit()
+    except Exception as e:
+        print(e)
+        session.rollback()
+        return
+
+
+
+
