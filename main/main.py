@@ -8,6 +8,7 @@ from auth.models import *
 
 from files.methods import *
 
+import httpx
 
 app = FastAPI()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
@@ -49,7 +50,9 @@ async def create_user(username: Annotated[str, Form()], email: Annotated[str, Fo
 # files ish
 @app.post("/upload_file")
 async def upload_file(file: UploadFile, current_user: Annotated[DataBaseUser, Depends(get_current_active_user)]):
-     await create_file(file, current_user)
+    async with httpx.AsyncClient() as client:
+        await client.post('http://127.0.0.1:3000/hello', json = {'file_name' : file.filename}) 
+    await create_file(file, current_user)
 
 @app.get("/files")
 async def show_files(current_user: Annotated[DataBaseUser, Depends(get_current_active_user)]):

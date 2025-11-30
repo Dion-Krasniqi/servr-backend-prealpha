@@ -4,3 +4,9 @@ venv
 __pycache__/
 *.pyc
 *.pyo
+
+**/*.d
+**/*.o
+rust_worker/target/
+target/
+**/*.rs.bk
