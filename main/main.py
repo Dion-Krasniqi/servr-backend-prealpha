@@ -51,11 +51,11 @@ async def login_for_access_token(form_data: Annotated[OAuth2PasswordRequestForm,
             data={"sub":user.email}, expires_delta=access_token_expires)
     return Token(access_token=access_token, token_type="bearer")
 @app.post("/create_user")
-async def create_user(username: Annotated[str, Form()], email: Annotated[str, Form()],
-                      password:Annotated[str, Form()]):
+async def create_user(form: CreateUserForm):
 
-    user_id = await create_new_user(username,email,password, minio_client)
+    user_id = await create_new_user(form.username, form.email, form.password, minio_client)
     return user_id
+
 # files ish
 @app.post("/upload_file")
 async def upload_file(file: UploadFile,
@@ -76,7 +76,7 @@ async def upload_file(file: UploadFile,
 
 @app.get("/files")
 async def show_files(current_user: Annotated[DataBaseUser, Depends(get_current_active_user)]):
-    files: List[FileResponse] = await get_files(current_user)
+    files = await get_files(current_user, minio_client)
     return files
 
 @app.post("/share")

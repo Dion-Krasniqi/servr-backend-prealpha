@@ -29,3 +29,13 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     email: str | None = None
+
+
+class LoginForm(BaseModel):
+    email:str
+    password:str
+
+class CreateUserForm(BaseModel):
+    username:str
+    email:str
+    password:str

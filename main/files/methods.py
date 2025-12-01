@@ -62,24 +62,22 @@ async def create_file(file: UploadFile,
                 raise HTTPException(status_code=502, detail="Error occured while adding file")
     
     return object_name
-async def get_files(user: DataBaseUser):
-    if (user == None):
-        return
-    
-    owner_id = user.id
-   
-    file_path = os.path.join(storage_url, str(owner_id))
-    
-    results = session.execute(select(FilePSQL.file_id, FilePSQL.filename, FilePSQL.extension).
-                              where((FilePSQL.owner_id == owner_id) | 
-                                    (user.email == any_(FilePSQL.shared_with))))
-    files: List[FileResponse] = []
-    for res in results:
-        cur_path = os.path.join(file_path, str(res.file_id) + res.extension)
-        files.append(FileResponse(cur_path))
-    return files
+
+async def get_files(user: DataBaseUser,
+                    client):    
+    owner_id = user.id 
+    try:
+        files = client.list_objects(bucket_name=str(owner_id))
+    except Exception as e:
+        print("Error occurred: ", e)
+        return -1
+
+    for file in files:
+        print(file)
+    return 1
 
 async def share_file(file_id: uuid, users: List[str]):
+    # think this should stay same
     if (len(users) == 0 or file_id == None):
         return
     try:

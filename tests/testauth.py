@@ -17,3 +17,13 @@ def test_login():
 
     assert "access_token" in body
     assert body["token_type"] == "bearer"
+
+def test_create_account():
+    data = {"username":"john",
+            "email":"janedoe@mail.com",
+            "password":"secret"
+            }
+    response = client.post("/create_user", json=data)
+    assert response.status_code == 200
+    body = response.json()
+
