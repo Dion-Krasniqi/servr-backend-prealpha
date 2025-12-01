@@ -11,7 +11,7 @@ from pwdlib import PasswordHash
 from sqlalchemy import select, insert, create_engine
 from sqlalchemy.orm import Session
 
-from database.database import *
+from main.database.database import *
 from .models import * #DataBaseUser, User 
 
 
@@ -85,24 +85,34 @@ async def get_current_active_user(current_user: Annotated[User, Depends(get_curr
         raise HTTPException(status_code=400, detail="Inactive User")
     return current_user
 
-async def create_new_user(username: str, email: str, password: str):
+async def create_new_user(username: str, email: str, password: str, client):
+    
     user = get_user(email)
     if user:
         raise HTTPException(status_code=400, detail="User with this email already exists")
     new_id = uuid.uuid4()
-    path = os.path.join(storage_url,str(new_id))
+
     try:
-         os.makedirs(path)
-    except OSError as e:
-         if e.errno != errno.EEXIST:
-            raise
-    newUser = {"username" : username, "email" : email, "hashed_password" : get_password_hash(password), "active" : True, "id": new_id}
+         client.make_bucket(bucket_name=str(new_id))
+         print("Created bucket: ", new_id)
+    except Exception as e:
+         print("An error occured: ", e)
+         return -1
+    
+    newUser = {"username" : username, 
+               "email" : email, 
+               "hashed_password" : get_password_hash(password), 
+               "active" : True, 
+               "id": new_id}
     try:
         session.execute(insert(UserPSQL).values(newUser))
         session.commit()
         
     except:
         session.rollback()
+        if (client.bucket_exists(bucket_name=str(new_id))):
+            client.remove_bucket(bucket_name=str(new_id))
+
         raise HTTPException(status_code=502, detail="Error occured while creating user")
 
     return new_id

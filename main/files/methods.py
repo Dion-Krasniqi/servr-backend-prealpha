@@ -1,11 +1,13 @@
 from fastapi import UploadFile, HTTPException
 from fastapi.responses import FileResponse
+
 from sqlalchemy import create_engine, select, insert, func, any_, update
 from sqlalchemy.orm import Session
 from typing import List
-from database.database import *
+
+from main.database.database import *
+from main.auth.models import *
 from .models import *
-from auth.models import *
 
 import os
 
@@ -14,36 +16,39 @@ storage_url = os.path.realpath(os.path.expanduser("/home/servr-api/storage"))
 session = Session(engine)
 
 
-async def create_file(file: UploadFile, current_user: DataBaseUser):
-    if (current_user == None):
-        return
+async def create_file(file: UploadFile, 
+                      dir_path:str, 
+                      current_user: DataBaseUser,
+                      client):
 
     owner_id = current_user.id
-    duplicate = session.execute(select(FilePSQL.filename)
-                                .where(func.concat(FilePSQL.filename, FilePSQL.extension)
-                                                                == file.filename)).first()
-    if (duplicate):
-        print('File already exists')
-        return
-    
-    file_path = os.path.join(storage_url, str(owner_id))
+    # minio handles call for duplicaes 
     
     file_id = uuid.uuid4()
-    name, extension = os.path.splitext(file.filename)
-    file_path = os.path.join(file_path, str(file_id) + extension)
-    contents = await file.read()
-    # potentially save file id for the filename, just keep filename in postgres
-    try:
-        with open(file_path, 'wb') as f:
-            f.write(contents)
-    except Exception as e:
-        print(e)
+    object_name = dir_path + file.filename
     
+    found = client.bucket_exists(bucket_name = str(owner_id))
+    if not found:
+        print("User bucket doesn't exist!")
+        return -1
+    try:
+        client.put_object(
+                bucket_name = str(owner_id),
+                object_name = object_name,
+                data = file.file,
+                length = file.size,
+                )
+    except Exception as e:
+        print("An error occurred: ", e)
+        return -1
+
+    name, extension = os.path.splitext(file.filename)
     new_file = {"file_id": file_id, 
                 "filename": name, 
                 "extension": extension, 
                 "size": file.size, 
-                "owner_id": owner_id,}
+                "owner_id": owner_id,
+                "bucket": object_name}
     
     try:
                 session.execute(insert(FilePSQL).values(new_file))
@@ -55,7 +60,8 @@ async def create_file(file: UploadFile, current_user: DataBaseUser):
                 if os.path.exists(file_path):
                     os.remove(file_path)
                 raise HTTPException(status_code=502, detail="Error occured while adding file")
-
+    
+    return object_name
 async def get_files(user: DataBaseUser):
     if (user == None):
         return
