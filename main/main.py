@@ -1,17 +1,22 @@
-from fastapi import FastAPI, Depends, HTTPException, status, Form, UploadFile, File
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from fastapi.responses import FileResponse
 from typing import Annotated, List
 from pydantic import BaseModel
+
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi import FastAPI, Depends, HTTPException, status, Form, UploadFile, File
+from fastapi.responses import FileResponse
+
+from minio import Minio
+from minio.error import S3Error
+
 from auth.methods import *
 from auth.models import *
-
 from files.methods import *
-
+# just for rust for now
 import httpx
 
 app = FastAPI()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+minio_endpoint = "play.min.io"
 
 def fake_hash_password(password: str):
     return "fakehashed" + password
@@ -44,15 +49,49 @@ async def login_for_access_token(form_data: Annotated[OAuth2PasswordRequestForm,
 async def create_user(username: Annotated[str, Form()], email: Annotated[str, Form()],
                       password:Annotated[str, Form()]):
 
-  await create_new_user(username,email,password)
-  return 0 
+  user_id = await create_new_user(username,email,password)
+  client = Minio(
+          endpoint = minio_endpoint, #public play server
+          access_key = "Q3AM3UQ867SPQQA43P2F",
+          secret_key = "zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG",
+          )
+  try:
+      client.make_bucket(bucket_name =str(user_id))
+      print("Created bucket:", user_id)
+  except S3Error as e:
+      print(e)
+      return -1
+
+  return 1 
 
 # files ish
 @app.post("/upload_file")
 async def upload_file(file: UploadFile, current_user: Annotated[DataBaseUser, Depends(get_current_active_user)]):
-    async with httpx.AsyncClient() as client:
-        await client.post('http://127.0.0.1:3000/hello', json = {'file_name' : file.filename}) 
-    await create_file(file, current_user)
+    client = Minio(
+           endpoint = minio_endpoint,
+           access_key = "Q3AM3UQ867SPQQA43P2F",
+           secret_key = "zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG",
+           )
+    user_id = current_user.id
+    found = client.bucket_exists(bucket_name = str(user_id))
+    if not found:
+        print("User bucket doesn't exist!")
+        return -1
+    try:
+        client.put_object(
+                bucket_name = str(user_id),
+                object_name = file.filename,
+                data = file.file,
+                length = file.size,
+                )
+    except Exception as e:
+        print("An error occured: ", e)
+        return -1
+
+    return 1
+   # run background checks/tasks async with httpx.AsyncClient() as client:
+   #     await client.post('http://127.0.0.1:3000/hello', json = {'file_name' : file.filename}) 
+   # await create_file(file, current_user)
 
 @app.get("/files")
 async def show_files(current_user: Annotated[DataBaseUser, Depends(get_current_active_user)]):

@@ -105,4 +105,4 @@ async def create_new_user(username: str, email: str, password: str):
         session.rollback()
         raise HTTPException(status_code=502, detail="Error occured while creating user")
 
-    return 1
+    return new_id
