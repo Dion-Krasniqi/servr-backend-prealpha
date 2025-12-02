@@ -32,7 +32,7 @@ async def root():
 async def read_items(token: Annotated[str, Depends(oauth2_scheme)]):
     return {"token": token}
 @app.get("/users/me")
-async def read_users_me(current_user: Annotated[User, Depends(get_current_active_user)]):
+async def read_users_me(current_user: Annotated[DataBaseUser, Depends(get_current_active_user)]):
     return current_user
 @app.get("/passi")
 async def hash_it():
@@ -74,7 +74,7 @@ async def upload_file(file: UploadFile,
     else:
         print("Error")
         return -1
-
+    return 1
    # run background checks/tasks async with httpx.AsyncClient() as client:
    #     await client.post('http://127.0.0.1:3000/hello', json = {'file_name' : file.filename}) 
 
