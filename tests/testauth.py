@@ -8,22 +8,40 @@ client = TestClient(
 )
 
 def test_login():
-    data = {"username":"user@mail.com",
+    data = {"email":"user@mail.com",
             "password":"secret"}
 
-    response = client.post("/token", data=data)
+    response = client.post("/token", json=data)
     assert response.status_code == 200
     body = response.json()
 
     assert "access_token" in body
     assert body["token_type"] == "bearer"
+    token = body["access_token"]
+    get_user_response = client.get("/users/me", 
+                                    headers={"Authorization":"Bearer " + token})
+    body = get_user_response.json()
+    assert "email" in body
+    print(body)
 
 def test_create_account():
-    data = {"username":"john",
-            "email":"janedoe@mail.com",
+    data = {"username":"user1",
+            "email":"user1@mail.com",
             "password":"secret"
             }
     response = client.post("/create_user", json=data)
+    body = response.json()
+    data = {"email":"user1@mail.com",
+            "password":"secret"}
+
+    response = client.post("/token", json=data)
     assert response.status_code == 200
     body = response.json()
+    
+    assert "access_token" in body
+    assert body["token_type"] == "bearer"
+    token = body["access_token"]
+    
+    delete_user = client.post("/delete_account", headers={"Authorization":"Bearer " + token})
+    
 

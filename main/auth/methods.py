@@ -8,17 +8,15 @@ from jwt.exceptions import InvalidTokenError
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from pwdlib import PasswordHash
-from sqlalchemy import select, insert, create_engine
+from sqlalchemy import select, insert, create_engine, delete
 from sqlalchemy.orm import Session
 
 from main.database.database import *
-from .models import * #DataBaseUser, User 
+from .models import *  
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-load_dotenv()
-storage_url = os.path.realpath(os.path.expanduser(os.getenv("STORAGE_ADDRESS")))
 SECRET_KEY = "853237eb79d57d78bbcad22b7c81f5e8e4ec8c05b8cd44905d428316e981b3d2e" # env this soon
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
@@ -80,7 +78,8 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
         raise credentials_exception
     return user
 
-async def get_current_active_user(current_user: Annotated[User, Depends(get_current_user)]):
+async def get_current_active_user(current_user: Annotated[DataBaseUser, Depends(get_current_user)]):
+
     if (current_user.active==False):
         raise HTTPException(status_code=400, detail="Inactive User")
     return current_user
@@ -116,3 +115,15 @@ async def create_new_user(username: str, email: str, password: str, client):
         raise HTTPException(status_code=502, detail="Error occured while creating user")
 
     return new_id
+
+async def delete_user(user: DataBaseUser):
+        if (user == None):
+            return
+        try:
+            session.execute(delete(UserPSQL).where(UserPSQL.id == user.id))
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise HTTPException(status_code=502, detail="Error occured while deleting user,"+ e)
+        
+        return 1

@@ -39,8 +39,9 @@ async def hash_it():
     # since havent made create account point
     return get_password_hash("secret")
 @app.post("/token")
-async def login_for_access_token(form_data: Annotated[OAuth2PasswordRequestForm, Depends()])->Token:
-    user = authenticate_user(form_data.username, form_data.password)
+async def login_for_access_token(form: LoginForm,
+                                 )->Token:
+    user = authenticate_user(form.email, form.password)
     if not user:
         raise HTTPException(status_code=400, 
                             detail="Incorrect email or password", 
@@ -50,12 +51,15 @@ async def login_for_access_token(form_data: Annotated[OAuth2PasswordRequestForm,
     access_token = create_access_token(
             data={"sub":user.email}, expires_delta=access_token_expires)
     return Token(access_token=access_token, token_type="bearer")
+
 @app.post("/create_user")
 async def create_user(form: CreateUserForm):
 
     user_id = await create_new_user(form.username, form.email, form.password, minio_client)
     return user_id
-
+@app.post("/delete_user")
+async def delete_user_account(current_user: Annotated[DataBaseUser, Depends(get_current_active_user)]):
+    await delete_user(current_user)
 # files ish
 @app.post("/upload_file")
 async def upload_file(file: UploadFile,
