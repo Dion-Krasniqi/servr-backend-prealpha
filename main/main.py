@@ -65,9 +65,13 @@ async def delete_user_account(current_user: Annotated[DataBaseUser, Depends(get_
 async def upload_file(file: UploadFile,
                       dir_path:str,
                       current_user: Annotated[DataBaseUser, Depends(get_current_active_user)]):
+    print(file)
     if (dir_path.strip()):
         dir_path = dir_path + "/"
-    new_file = await create_file(file, dir_path, current_user, minio_client)
+    try:
+        new_file = await create_file(file, dir_path, current_user, minio_client)
+    except Exception as e:
+        print(e)
     if (new_file):
         print("Uploaded: ", new_file)
         return 1

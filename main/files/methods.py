@@ -23,10 +23,10 @@ async def create_file(file: UploadFile,
 
     owner_id = current_user.id
     # minio handles call for duplicaes 
-    
+    print(owner_id)    
     file_id = uuid.uuid4()
     object_name = dir_path + file.filename
-    
+    print(object_name)
     found = client.bucket_exists(bucket_name = str(owner_id))
     if not found:
         print("User bucket doesn't exist!")
@@ -48,8 +48,12 @@ async def create_file(file: UploadFile,
                 "extension": extension, 
                 "size": file.size, 
                 "owner_id": owner_id,
+                "type": "image",
+                "createdat": "1970-01-01",
+                "lastmodified": "1970-01-01",
+                "url":"url1", 
                 "bucket": object_name}
-    
+    print(new_file) 
     try:
                 session.execute(insert(FilePSQL).values(new_file))
                 session.commit()
@@ -67,14 +71,32 @@ async def get_files(user: DataBaseUser,
                     client):    
     owner_id = user.id 
     try:
-        files = client.list_objects(bucket_name=str(owner_id))
+        files = session.execute(select(FilePSQL).where(FilePSQL.owner_id == owner_id)).scalars().all()
+        #files = client.list_objects(bucket_name=str(owner_id))
     except Exception as e:
         print("Error occurred: ", e)
         return -1
-
+    print(files)
+    documents = []
     for file in files:
-        print(file)
-    return 1
+        # not like this tbh
+        url = client.presigned_get_object(
+                    bucket_name=str(owner_id),
+                        object_name=db_file.object_name,
+                            expires=3600
+                            )
+        documents.append({"id":str(file.filed_id),
+                          "name": file.filename, 
+                          "createdAt":file.createdat or "1970-01-01",
+                          "lastModified":file.lastmodified or "1970-01-01",
+                          "url":url,
+                          "type":file.type,
+                          "size":file.size,
+                          "ownerName":"user",
+                          "sharedWith":file.shared_with,
+                          "bucket":owner_id,
+                          })
+    return documents
 
 async def share_file(file_id: uuid, users: List[str]):
     # think this should stay same
