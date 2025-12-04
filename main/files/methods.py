@@ -21,29 +21,28 @@ async def create_file(file: UploadFile,
                       current_user: DataBaseUser,
                       client):
 
+    
     owner_id = current_user.id
-    # minio handles call for duplicaes 
-    print(owner_id)    
-    file_id = uuid.uuid4()
-    object_name = dir_path + file.filename
-    print(object_name)
     found = client.bucket_exists(bucket_name = str(owner_id))
     if not found:
         print("User bucket doesn't exist!")
         return -1
     
-    #    minio_name = file.filename.replace(" ", "_")
+    file_id = uuid.uuid4()
+    
+    # object_name = file.filename.replace(" ", "_")
+    
     try:
         client.put_object(
                 bucket_name = str(owner_id),
-                object_name = object_name,
+                object_name = file_id,
                 data = file.file,
                 length = file.size,
                 )
     except Exception as e:
         print("An error occurred: ", e)
         return -1
-
+    # think about this
     name, extension = os.path.splitext(file.filename)
     new_file = {"file_id": file_id, 
                 "filename": name, 
@@ -53,9 +52,7 @@ async def create_file(file: UploadFile,
                 "type": "image",
                 "createdat": "1970-01-01",
                 "lastmodified": "1970-01-01",
-                "url":"url1", 
-                "bucket": object_name}
-    print(new_file) 
+                "url":"url1"}
     try:
                 session.execute(insert(FilePSQL).values(new_file))
                 session.commit()
@@ -67,13 +64,21 @@ async def create_file(file: UploadFile,
                     os.remove(file_path)
                 raise HTTPException(status_code=502, detail="Error occured while adding file")
     
-    return object_name
+    return file.filename
 
 async def get_files(user: DataBaseUser,
-                    client):    
-    owner_id = user.id 
+                    client,
+                    queries: List[str] | None = None,
+                    directory: uuid.UUID | None = None,
+                    ):    
+    owner_id = user.id
+
+    stmt = select(FilePSQL).where(FilePSQL.owner_id == owner_id)
+    if (directory):
+        stmt = stmt.where(FilePSQL.folder_id == directory)
     try:
-        files = session.execute(select(FilePSQL).where(FilePSQL.owner_id == owner_id)).scalars().all()
+
+        files = session.execute(stmt).scalars().all()
         #files = client.list_objects(bucket_name=str(owner_id))
     except Exception as e:
         print("Error occurred: ", e)
@@ -87,6 +92,7 @@ async def get_files(user: DataBaseUser,
                     object_name=file.filename,
                     expires=timedelta(minutes=1),
                     )
+
         documents.append({"id":str(file.file_id),
                           "name": file.filename, 
                           "createdAt":file.createdat or "1970-01-01",
@@ -96,7 +102,7 @@ async def get_files(user: DataBaseUser,
                           "size":file.size,
                           "ownerName":"user",
                           "sharedWith":file.shared_with,
-                          "bucket":owner_id,
+                          "bucket":file.owner_id
                           })
     return documents
 
