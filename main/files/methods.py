@@ -4,7 +4,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy import create_engine, select, insert, func, any_, update
 from sqlalchemy.orm import Session
 from typing import List
-
+from datetime import timedelta
 from main.database.database import *
 from main.auth.models import *
 from .models import *
@@ -31,6 +31,8 @@ async def create_file(file: UploadFile,
     if not found:
         print("User bucket doesn't exist!")
         return -1
+    
+    #    minio_name = file.filename.replace(" ", "_")
     try:
         client.put_object(
                 bucket_name = str(owner_id),
@@ -82,10 +84,10 @@ async def get_files(user: DataBaseUser,
         # not like this tbh
         url = client.presigned_get_object(
                     bucket_name=str(owner_id),
-                        object_name=db_file.object_name,
-                            expires=3600
-                            )
-        documents.append({"id":str(file.filed_id),
+                    object_name=file.filename,
+                    expires=timedelta(minutes=1),
+                    )
+        documents.append({"id":str(file.file_id),
                           "name": file.filename, 
                           "createdAt":file.createdat or "1970-01-01",
                           "lastModified":file.lastmodified or "1970-01-01",

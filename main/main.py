@@ -62,9 +62,9 @@ async def delete_user_account(current_user: Annotated[DataBaseUser, Depends(get_
     await delete_user(current_user)
 # files ish
 @app.post("/upload_file")
-async def upload_file(file: UploadFile,
-                      dir_path:str,
-                      current_user: Annotated[DataBaseUser, Depends(get_current_active_user)]):
+async def upload_file(current_user: Annotated[DataBaseUser, Depends(get_current_active_user)],
+                      file: UploadFile = File(...),
+                      dir_path:str = ''):
     print(file)
     if (dir_path.strip()):
         dir_path = dir_path + "/"
