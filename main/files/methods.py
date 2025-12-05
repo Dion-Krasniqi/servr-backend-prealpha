@@ -15,6 +15,20 @@ storage_url = os.path.realpath(os.path.expanduser("/home/servr-api/storage"))
 
 session = Session(engine)
 
+FILE_TYPE = {
+        "image": "media",
+        "video": "media",
+        "audio": "media",
+        "text": "document",
+        "application": "document",
+}
+
+def get_type(content_type:str):
+    if not content_type:
+        return "other"
+    main = content_type.split("/")[0]
+
+    return FILE_TYPE.get(main, "other")
 
 async def create_file(file: UploadFile, 
                       dir_path:str, 
@@ -44,12 +58,13 @@ async def create_file(file: UploadFile,
         return -1
     # think about this
     name, extension = os.path.splitext(file.filename)
+    content_type = get_type(file.content_type)
     new_file = {"file_id": file_id, 
                 "filename": name, 
                 "extension": extension, 
                 "size": file.size, 
                 "owner_id": owner_id,
-                "type": "image",
+                "type": content_type,
                 "createdat": "1970-01-01",
                 "lastmodified": "1970-01-01",
                 "url":"url1"}
