@@ -46,18 +46,18 @@ async def create_file(file: UploadFile,
     
     # object_name = file.filename.replace(" ", "_")
     
+    # think about this
+    name, extension = os.path.splitext(file.filename)
     try:
         client.put_object(
                 bucket_name = str(owner_id),
-                object_name = file_id,
+                object_name = str(file_id) + extension,
                 data = file.file,
                 length = file.size,
                 )
     except Exception as e:
         print("An error occurred: ", e)
         return -1
-    # think about this
-    name, extension = os.path.splitext(file.filename)
     content_type = get_type(file.content_type)
     new_file = {"file_id": file_id, 
                 "filename": name, 
@@ -91,6 +91,8 @@ async def get_files(user: DataBaseUser,
     stmt = select(FilePSQL).where(FilePSQL.owner_id == owner_id)
     if (directory):
         stmt = stmt.where(FilePSQL.folder_id == directory)
+    if (queries):
+        stmt = stmt.where(FilePSQL.type == 'media')
     try:
 
         files = session.execute(stmt).scalars().all()

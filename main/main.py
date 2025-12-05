@@ -2,7 +2,7 @@ from typing import Annotated, List
 from pydantic import BaseModel
 
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from fastapi import FastAPI, Depends, HTTPException, status, Form, UploadFile, File
+from fastapi import FastAPI, Depends, HTTPException, status, Form, UploadFile, File, Query
 from fastapi.responses import FileResponse
 
 from minio import Minio
@@ -83,8 +83,9 @@ async def upload_file(current_user: Annotated[DataBaseUser, Depends(get_current_
    #     await client.post('http://127.0.0.1:3000/hello', json = {'file_name' : file.filename}) 
 
 @app.get("/files")
-async def show_files(current_user: Annotated[DataBaseUser, Depends(get_current_active_user)]):
-    files = await get_files(current_user, minio_client)
+async def show_files(current_user: Annotated[DataBaseUser, Depends(get_current_active_user)], 
+                     queries: List[str] | None = Query(None)):
+    files = await get_files(current_user, minio_client, queries)
     return files
 
 @app.post("/share")
