@@ -10,7 +10,7 @@ from main.auth.models import *
 from .models import *
 
 import os
-
+import io
 storage_url = os.path.realpath(os.path.expanduser("/home/servr-api/storage"))
 
 session = Session(engine)
@@ -48,17 +48,22 @@ async def create_file(file: UploadFile,
     
     # think about this
     name, extension = os.path.splitext(file.filename)
+    object_name = str(file_id) + extension
+
+    c = await file.read()
+    length = len(c)
+    content_type = get_type(file.content_type)
     try:
         client.put_object(
                 bucket_name = str(owner_id),
-                object_name = str(file_id) + extension,
-                data = file.file,
-                length = file.size,
+                object_name = object_name,
+                data = io.BytesIO(c),
+                length = length,
+                content_type = content_type 
                 )
     except Exception as e:
         print("An error occurred: ", e)
         return -1
-    content_type = get_type(file.content_type)
     new_file = {"file_id": file_id, 
                 "filename": name, 
                 "extension": extension, 
@@ -92,7 +97,7 @@ async def get_files(user: DataBaseUser,
     if (directory):
         stmt = stmt.where(FilePSQL.folder_id == directory)
     if (queries):
-        stmt = stmt.where(FilePSQL.type == 'media')
+        stmt = stmt.where(FilePSQL.type == queries[0])
     try:
 
         files = session.execute(stmt).scalars().all()
