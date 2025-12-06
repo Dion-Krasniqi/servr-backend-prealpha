@@ -6,4 +6,10 @@ edition = "2024"
 [dependencies]
 axum = "0.8.7"
 tokio = { version = "1", features = ["full"] }
-serde = { version = "1.0.228", features = ["derive"] } 
+serde = { version = "1.0.228", features = ["derive"] }
+sqlx = { version = "0.8", features = ["postgres", "runtime-tokio", "uuid"] }
+dotenv = "0.15"
+
+[dependencies.uuid]
+version = "1.19.0"
+features = ["v4"]
