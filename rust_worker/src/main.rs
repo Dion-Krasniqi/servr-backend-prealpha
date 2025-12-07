@@ -1,34 +1,61 @@
 use axum::{
     extract,
-    routing::post,
+    routing::get,
     Router,
 };
 use sqlx::postgres::PgPoolOptions;
 
 use serde::Deserialize;
+
 use uuid::Uuid;
+use chrono::{DateTime, Utc, NaiveDateTime};
+
+#[derive(Deserialize)]
+pub struct OwnerId {
+    pub owner_id: String,
+}
+
+#[derive(Debug)]
+#[derive(sqlx::Type)]
+#[sqlx(type_name = "file_type", rename_all = "lowercase")]
+enum File_Type { Media, Document, Other }
+
+
+use sqlx::PgPool;
 
 #[derive(Debug)]
 #[derive(sqlx::FromRow)]
 pub struct DatabaseFile {
     pub file_id: Uuid,
     pub filename: String,
-    pub file_type: Option<String>,
+    pub file_type: Option<File_Type>,
     pub owner_id: Uuid,
     pub extension: String,
     pub size: f32,
     pub url: Option<String>,
-    pub createdat: Option<String>,
-    pub lastmodified: Option<String>,
+    pub createdat: Option<NaiveDateTime>,
+    pub lastmodified: Option<DateTime<Utc>>,
     pub shared_with: Vec<String>,
 }
+// -> Result<Vec<DatabaseFile>, sqlx::Error>
+pub async fn get_files(/*pool: &sqlx::PgPool,*/extract::State(pool): extract::State<PgPool>,
+    extract::Json(payload): extract::Json<OwnerId>) -> Result<String, String> {
 
-pub async fn get_files(pool: &sqlx::PgPool, file_id: Uuid) -> Result<DatabaseFile, sqlx::Error> {
-    let file = sqlx::query_as::<_, DatabaseFile>("SELECT * FROM files where file_id = $1")
-        .bind(file_id)
-        .fetch_one(pool)
-        .await?;
-    Ok(file)
+    let owner_id = match Uuid::parse_str(&payload.owner_id) {
+        Ok(id) => id,
+        Err(e) => return Err("Failed".to_string()),
+    };
+
+    let files = match sqlx::query_as::<_,DatabaseFile>("SELECT * FROM files where owner_id = $1")
+        .bind(owner_id)
+        .fetch_all(&pool)
+        .await {
+            Ok(f) => f,
+            Err(e) => return Err(format!("Database error: {}", e)),
+        };
+
+    println!("Files: {:?}", files);
+    Ok(format!("Found {} files", files.len()))
 }
 
 
@@ -43,17 +70,15 @@ async fn main() {
     .expect("Failed to create pool");
 
     println!("Connected to the database!");
-    //
-    let fileID =  Uuid::parse_str("6380a4c5ff79442ca32a6eb506dd3241").unwrap();
-    let file = get_files(&pool, fileID).await.unwrap();
-    println!("File: {:?}", file);
+    
+    //let ownerID =  Uuid::parse_str("50d16e49-5044-462e-afb9-63365148ac94").unwrap();
 
-    //let app = Router::new().route("/hello", get());
+    let app = Router::new().route("/hello", get(get_files)).with_state(pool.clone());
 
-    //let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
 
-    //axum::serve(listener, app)
-     //   .await
-       // .unwrap();
+    axum::serve(listener, app)
+        .await
+        .unwrap();
 
 }
