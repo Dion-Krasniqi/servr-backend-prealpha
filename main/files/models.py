@@ -20,6 +20,6 @@ class FilePSQL(Base):
     url: Mapped[str]
     createdat: Mapped[datetime] = mapped_column(DateTime(timezone=False))
     lastmodified: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-    type: Mapped[str]
+    file_type: Mapped[str]
 
 

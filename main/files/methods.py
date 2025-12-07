@@ -69,7 +69,7 @@ async def create_file(file: UploadFile,
                 "extension": extension, 
                 "size": file.size, 
                 "owner_id": owner_id,
-                "type": content_type,
+                "file_type": content_type,
                 "createdat": "1970-01-01",
                 "lastmodified": "1970-01-01",
                 "url":"url1"}
@@ -97,7 +97,7 @@ async def get_files(user: DataBaseUser,
     if (directory):
         stmt = stmt.where(FilePSQL.folder_id == directory)
     if (queries):
-        stmt = stmt.where(FilePSQL.type == queries[0])
+        stmt = stmt.where(FilePSQL.file_type == queries[0])
     try:
 
         files = session.execute(stmt).scalars().all()
@@ -120,7 +120,7 @@ async def get_files(user: DataBaseUser,
                           "createdAt":file.createdat or "1970-01-01",
                           "lastModified":file.lastmodified or "1970-01-01",
                           "url":url,
-                          "type":file.type,
+                          "file_type":file.file_type,
                           "size":file.size,
                           "ownerName":"user",
                           "sharedWith":file.shared_with,

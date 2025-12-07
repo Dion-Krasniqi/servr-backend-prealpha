@@ -85,8 +85,10 @@ async def upload_file(current_user: Annotated[DataBaseUser, Depends(get_current_
 @app.get("/files")
 async def show_files(current_user: Annotated[DataBaseUser, Depends(get_current_active_user)], 
                      queries: List[str] | None = Query(None)):
-    files = await get_files(current_user, minio_client, queries)
-    return files
+    async with httpx.AsyncClient() as client:
+        files = await client.post('http://127.0.0.1:3000/hello', json = {'owner_id': str(current_user.id)})
+    
+    return files.json()
 
 @app.post("/share")
 async def share_with(file: Annotated[str, Form()], emails: Annotated[str, Form()],

@@ -1,11 +1,12 @@
 use axum::{
     extract,
-    routing::get,
+    routing::post,
     Router,
+    Json,
 };
 use sqlx::postgres::PgPoolOptions;
 
-use serde::Deserialize;
+use serde::{Serialize, Deserialize};
 
 use uuid::Uuid;
 use chrono::{DateTime, Utc, NaiveDateTime};
@@ -16,7 +17,7 @@ pub struct OwnerId {
 }
 
 #[derive(Debug)]
-#[derive(sqlx::Type)]
+#[derive(Serialize,sqlx::Type)]
 #[sqlx(type_name = "file_type", rename_all = "lowercase")]
 enum File_Type { Media, Document, Other }
 
@@ -24,7 +25,7 @@ enum File_Type { Media, Document, Other }
 use sqlx::PgPool;
 
 #[derive(Debug)]
-#[derive(sqlx::FromRow)]
+#[derive(Serialize, sqlx::FromRow)]
 pub struct DatabaseFile {
     pub file_id: Uuid,
     pub filename: String,
@@ -37,9 +38,10 @@ pub struct DatabaseFile {
     pub lastmodified: Option<DateTime<Utc>>,
     pub shared_with: Vec<String>,
 }
-// -> Result<Vec<DatabaseFile>, sqlx::Error>
-pub async fn get_files(/*pool: &sqlx::PgPool,*/extract::State(pool): extract::State<PgPool>,
-    extract::Json(payload): extract::Json<OwnerId>) -> Result<String, String> {
+
+
+async fn get_files(/*pool: &sqlx::PgPool,*/extract::State(pool): extract::State<PgPool>,
+    extract::Json(payload): extract::Json<OwnerId>) -> Result<Json<Vec<DatabaseFile>>, /*sqlx::Error*/String> {
 
     let owner_id = match Uuid::parse_str(&payload.owner_id) {
         Ok(id) => id,
@@ -54,8 +56,7 @@ pub async fn get_files(/*pool: &sqlx::PgPool,*/extract::State(pool): extract::St
             Err(e) => return Err(format!("Database error: {}", e)),
         };
 
-    println!("Files: {:?}", files);
-    Ok(format!("Found {} files", files.len()))
+    Ok(Json(files))
 }
 
 
@@ -73,7 +74,7 @@ async fn main() {
     
     //let ownerID =  Uuid::parse_str("50d16e49-5044-462e-afb9-63365148ac94").unwrap();
 
-    let app = Router::new().route("/hello", get(get_files)).with_state(pool.clone());
+    let app = Router::new().route("/hello", post(get_files)).with_state(pool.clone());
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
 
